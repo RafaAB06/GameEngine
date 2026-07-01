@@ -254,6 +254,8 @@ vec2 vec2_normalize(vec2 a){
 
 vec3 vec3_normalize(vec3 a){
     float length = vec3_length(a);
+    if(!length) return VEC3_ZERO;
+    
     vec3 result = vec3_div(a, length);
 
     return result;

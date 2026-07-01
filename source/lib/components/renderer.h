@@ -9,10 +9,10 @@ typedef struct{
     Mesh *mesh;
     uint32 material_id;
     uint32 program_id;
-    uint32 go_id;
+    uint32 entity_id;
 }Renderer;
 
-void renderer_new(Renderer *self, uint32 go_id,  Mesh *mesh, Material mat);
+void renderer_new(Renderer *self, uint32 entity_id,  Mesh *mesh, Material mat);
 void renderer_on_update(void *self);
 void renderer_on_destroy(void *self);
 

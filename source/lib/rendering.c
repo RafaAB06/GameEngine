@@ -3,9 +3,9 @@
 #include "../dependencies/glad.h"
 
 #include "material.h"
+#include "entities.h"
 #include "rendering.h"
 #include "engine.h"
-#include "input.h"
 #include "types.h"
 #include "mesh.h"
 #include "time.h"
@@ -29,52 +29,40 @@ static int32 materials_is_dirty = 0;
 static ArrayList *renderers;
 static int32 renderers_is_dirty = 0;
 
-static Camera cam = {};
-static DirectionalLight main_light = {
-    (vec3){0, 10, 0}, (vec3){-45, 45, 0}, (vec4){1, 0, 0, 1}, 1
-};
-static uint32 target = 0;
+Camera main_camera = {};
+DirectionalLight main_light = {};
+
+INLINE void init_main_camera(){
+    main_camera.position = VEC3_ZERO;
+    main_camera.rotation = VEC3_ZERO;
+
+    main_camera.near_plane = 0.01f;
+    main_camera.far_plane = 100.0f;
+    main_camera.FOV = 90.0f;
+
+    main_camera.projection_dirty = 1;
+    main_camera.view_dirty = 1;
+}
+
+INLINE void init_main_light(){
+    main_light.color = VEC4_ONE;
+    main_light.intensity = 1.0f;
+    main_light.rotation = (vec3){-45, 0, 0};
+}
 
 void init_rendering(){
-    glEnable(GL_CULL_FACE);
+    init_main_camera();
+    init_main_light();
 
-    cam.near_plane = 0.01f;
-    cam.far_plane = 100.0f;
-    cam.FOV = 90.0f;
     vec3 pos = {0, 0, 2};
-    cam.position = pos;
+    main_camera.position = pos;
     vec3 rot = {0, 0, 0};
-    cam.rotation = rot;
+    main_camera.rotation = rot;
     
     materials = array_list_new(sizeof(Material));
     renderers = array_list_new(sizeof(Renderer));
 
-    vec3 position = {0, 0, 0};
-    vec3 rotation = {0, 0, 0};
-    vec3 scale = VEC3_ONE;
-    GameObject obj;
-    game_object_new(&obj, "MyGameObject", position, rotation, scale, NO_PARENT);
-    
-    vec4 color;
-    ShaderProgram program = program = create_shader("unlit_vert", "unlit_frag");
-    Material mat = create_material(program, 2);
-
-    Texture2D tex = create_texture("peixe");
-    material_add_texture_uniform(&mat, tex);
-    UniformValue value = { .vec4_value = {0.5f, 1.0f, 0.0f, 1.0f} };
-    material_add_uniform(&mat, "base_color", UNIFORM_VEC4, value);
-
-    register_material(mat);
-
-    Mesh *mesh = create_mesh("cube");
-    
-    register_component(COMPONENT_RENDERER, sizeof(Renderer), renderer_on_update, renderer_on_destroy);
-    
-    Renderer renderer;
-    renderer_new(&renderer, obj.id, mesh, mat);
-    add_component(COMPONENT_RENDERER, obj.id, &renderer);
-
-    set_camera_target(&cam, obj.id);
+    glEnable(GL_CULL_FACE);
 }
 
 void update_rendering(){    
@@ -92,6 +80,21 @@ void update_rendering(){
         renderers_is_dirty = 0;
 
         array_list_sort(renderers, renderer_comparator);
+    }  
+
+    uint32 target_id = main_camera.target_id;
+    if(target_id){
+        uint32 dirty;
+        get_entity_data(target_id, ENTITY_DIRTY, &dirty);
+        main_camera.view_dirty = dirty;
+    }
+    if(main_camera.projection_dirty){
+        main_camera.projection = get_camera_projection();
+        main_camera.projection_dirty = 0;
+    }
+    if(main_camera.view_dirty){
+        main_camera.view = get_camera_view();
+        main_camera.view_dirty = 0;
     }
 
     int32 mat_count = materials->count;
@@ -103,6 +106,7 @@ void update_rendering(){
         array_list_get(materials, &mat, i);
 
         uint32 current_program = mat.program.gl_id;
+        int32 model = glGetUniformLocation(current_program, "u_model");
         if(current_program != last_program){
             last_program = current_program;
             
@@ -111,14 +115,10 @@ void update_rendering(){
             int32 u_time = glGetUniformLocation(current_program, "u_time");
             glUniform1f(u_time, get_time());
             
-            //main light
-            int32 u_ml_pos = glGetUniformLocation(current_program, "u_main_light.position");
             int32 u_ml_dir = glGetUniformLocation(current_program, "u_main_light.direction");
             int32 u_ml_col = glGetUniformLocation(current_program, "u_main_light.color");
             int32 u_ml_int = glGetUniformLocation(current_program, "u_main_light.intensity");
 
-            vec3 position = main_light.position;
-            glUniform3fv(u_ml_pos, 1, &position.x);
             vec3 direction = vec3_rot_dir(main_light.rotation);
             glUniform3fv(u_ml_dir, 1, &direction.x);
             vec4 color = main_light.color;
@@ -126,11 +126,11 @@ void update_rendering(){
             float intensity = main_light.intensity;
             glUniform1f(u_ml_int, intensity);
 
-            mat4 projection = get_camera_projection(&cam);
+            mat4 projection = main_camera.projection;
             int32 u_projection = glGetUniformLocation(current_program, "u_projection");
             glUniformMatrix4fv(u_projection, 1, GL_FALSE, projection.m);
             
-            mat4 view = get_camera_view(&cam);
+            mat4 view = main_camera.view;
             int32 u_view = glGetUniformLocation(current_program, "u_view");
             glUniformMatrix4fv(u_view, 1, GL_FALSE, view.m);
         }
@@ -148,24 +148,11 @@ void update_rendering(){
             
             Mesh mesh = *(renderer.mesh);
 
-            uint32 go_id = renderer.go_id;
-            GameObject obj;
-            get_game_object(go_id, &obj);
-
-            vec3 position = obj.position;
-            vec3 rotation = obj.rotation;
-            vec3 scale = obj.scale;
-
-            position.y = sin(get_time())*5;
-            obj.position = position;
-            rotation.y += 25.0f * get_delta_time();
-            rotation.z += 25.0f * get_delta_time();
-            obj.rotation = rotation;
-            update_game_object(go_id, &obj);
+            uint32 entity_id = renderer.entity_id;
+            mat4 world_matrix;
+            get_entity_data(entity_id, ENTITY_WORLD, &world_matrix);
             
-            mat4 model = mat4_trs(position, rotation, scale);
-            int32 model_u_loc = glGetUniformLocation(current_program, "u_model");
-            glUniformMatrix4fv(model_u_loc, 1, GL_FALSE, model.m);
+            glUniformMatrix4fv(model, 1, GL_FALSE, world_matrix.m);
 
             glBindVertexArray(renderer.mesh->VAO);
             glDrawElements(GL_TRIANGLES, mesh.index_count, GL_UNSIGNED_INT, 0);
@@ -194,12 +181,12 @@ void set_uniforms(Material material){
                 glUniform1i(id, int_v);
             break;
             case UNIFORM_VEC3:
-                vec3 vec = value.vec3_value;
-                glUniform3fv(id, 1, (float *)&vec);
+                vec3 vec_3 = value.vec3_value;
+                glUniform3fv(id, 1, (float *)&vec_3);
             break;
             case UNIFORM_VEC4:
-                vec4 vec = value.vec4_value;
-                glUniform4fv(id, 1, (float *)&vec);
+                vec4 vec_4 = value.vec4_value;
+                glUniform4fv(id, 1, (float *)&vec_4);
             break;
             case UNIFORM_TEXTURE:
                 uint32 tex = value.tex_value.gl_texture;

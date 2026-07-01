@@ -3,6 +3,7 @@
 
 #include "../types.h"
 
+#define VEC4_ONE (vec4){1, 1, 1, 1}
 #define VEC4_ZERO (vec4){}
 
 #define VEC3_UP (vec3){ 0, 1, 0}

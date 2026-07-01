@@ -12,8 +12,8 @@ int32 renderer_comparator(void *a, void *b){
     return (r_1.program_id > r_2.program_id) - (r_1.program_id < r_2.program_id);
 }
 
-void renderer_new(Renderer *self, uint32 go_id,  Mesh *mesh, Material mat){
-    self->go_id = go_id;
+void renderer_new(Renderer *self, uint32 entity_id,  Mesh *mesh, Material mat){
+    self->entity_id = entity_id;
     self->mesh = mesh;
     self->material_id = mat.id;
     self->program_id = mat.program.gl_id;

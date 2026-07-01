@@ -14,8 +14,9 @@
 #include "time.h"
 #include "screen.h"
 #include "input.h"
+#include "entities.h"
 
-#include "../game/game.h"
+#include "game.h"
 
 GLFWwindow *main_window = NULL;
 
@@ -82,6 +83,7 @@ int main(){
     read_configs();
     create_window();
 
+    init_entities();
     init_components();
 
     init_time();
@@ -93,11 +95,11 @@ int main(){
 
     while (!glfwWindowShouldClose(main_window)){
         glfwPollEvents();
-        update_input();
+
+        update_input(); 
         update_components();
-
         game_update();
-
+        update_entities();
         update_rendering();
 
         glfwSwapBuffers(main_window);
@@ -105,7 +107,6 @@ int main(){
         update_time();
     }
     game_shutdown();
-
     glfwTerminate();
 
     return 0;

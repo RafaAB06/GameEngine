@@ -16,6 +16,83 @@ void mat4_print(mat4 mat){
     mat_print(&mat.m[0], 4);
 }
 
+vec3 mat4_angles(mat4 m){
+    // float *fs = m.m;
+
+    // float r31 = fs[2];
+    // float y = -asinf(fs[2]);
+    // float cos_y = cosf(x);
+    // float y = atan2(
+    //     fs[6]/cos_y,
+    //     fs[10]/cos_y
+    // );
+    // float z = atan2(
+    //     fs[1]/cos_y,
+    //     fs[0]/cos_y
+    // );
+
+    // R11 = m[0]
+    // R12 = m[4]
+    // R13 = m[8]
+
+    // R21 = m[1]
+    // R22 = m[5]
+    // R23 = m[9]
+
+    // R31 = m[2]
+    // R32 = m[6]
+    // R33 = m[10]
+
+    // if (R31 != ±1)
+    //     θ1 = -asin(R31)
+    //     θ2 = π - θ1
+
+    //     ψ1 = atan2(R32 / cos(θ1), R33 / cos(θ1))
+    //     ψ2 = atan2(R32 / cos(θ2), R33 / cos(θ2))
+
+    //     φ1 = atan2(R21 / cos(θ1), R11 / cos(θ1))
+    //     φ2 = atan2(R21 / cos(θ2), R11 / cos(θ2))
+
+    // else
+    //     φ = anything; can set to 0
+
+    //     if (R31 == -1)
+    //         θ = π/2
+    //         ψ = φ + atan2(R12, R13)
+    //     else
+    //         θ = -π/2
+    //         ψ = -φ + atan2(-R12, -R13)
+    //     end if
+    // end if
+}
+
+vec3 mat4_back(mat4 m){
+    float *fs = m.m;
+    vec3 v = (vec3){
+        fs[8], fs[9], fs[10]
+    };
+
+    return vec3_normalize(v);
+}
+
+vec3 mat4_right(mat4 m){
+    float *fs = m.m;
+    vec3 v = (vec3){
+        fs[0], fs[1], fs[2]
+    };
+
+    return vec3_normalize(v);
+}
+
+vec3 mat4_up(mat4 m){
+    float *fs = m.m;
+    vec3 v = (vec3){
+        fs[4], fs[5], fs[6]
+    };
+
+    return vec3_normalize(v);
+}
+
 mat4 mat4_look_at(vec3 eye, vec3 target, vec3 up){
     vec3 f = vec3_normalize(vec3_sub(eye, target));
     float dot = vec3_dot(f, VEC3_UP);
@@ -29,7 +106,7 @@ mat4 mat4_look_at(vec3 eye, vec3 target, vec3 up){
     mat4 rot = { .m = {
         r.x, r.y, r.z, 0,
         u.x, u.y, u.z, 0,
-        f.x, f.y, f.z, 0,
+        f.x, f.y, f.z, 0,//open gl usa -Z, entao informo o back
         0  , 0  , 0  , 1
     }};
 

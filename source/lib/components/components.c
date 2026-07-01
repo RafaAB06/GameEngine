@@ -1,4 +1,5 @@
 #include <stdlib.h>
+#include <stdio.h>
 #include <string.h>
 
 #include "../rendering.h"
@@ -14,32 +15,14 @@
 #include "id_generator.h"
 #include "components.h"
 
-static int32 go_comparer(void *a_ptr, void *b_ptr){
-    GameObject a = *(GameObject *)a_ptr;
-    GameObject b = *(GameObject *)b_ptr;
-
-    return (a.depth < b.depth) - (a.depth > b.depth);
-}
-
-static int32 go_pool_dirty;
-static ComponentPool go_pool;
-static ID_Generator *go_id_gen;
 static ComponentPool pools[COMPONENT_COUNT];
 static int32 pool_count;
 
 void init_components(){
-    go_id_gen = id_generator_new(1u);
 
-    go_pool.sparse_set = sparse_set_new(sizeof(GameObject));
 }
 
 void update_components(){
-    if(go_pool_dirty){
-        go_pool_dirty = 0;
-
-        sparse_set_sort(go_pool.sparse_set, go_comparer);
-    }
-
     int32 i = COMPONENT_NONE + 1;
     for(i; i < COMPONENT_COUNT; i++){
         ComponentPool pool = pools[i];
@@ -50,8 +33,6 @@ void update_components(){
         int32 c_size = pool.component_size;
         void *array = set->array;
 
-        //printf("%d\n", count);
-
         int32 j;
         for(j = 0; j<count; j++){
             void *position = ((int8 *)array) + j * c_size;
@@ -59,66 +40,6 @@ void update_components(){
             pool.on_update(position);
         }
     }
-}
-
-void game_object_new(GameObject *obj, const char *name, vec3 position, vec3 rotation, vec3 scale, uint32 parent_id){
-    uint32 id = next_id(go_id_gen);
-    obj->id = id;
-
-    int32 len = strlen(name);
-    char *str = (char *)malloc(len + 1);
-    strcpy(str, name);
-    obj->name = str;
-
-    obj->position = position;
-    obj->rotation = rotation;
-    obj->scale = scale;
-
-    GameObject parent;
-    int32 sucess = get_game_object(parent_id, &parent);
-    uint32 depth = 0;
-    if(sucess){
-        uint32 parent_depth = parent.depth;
-        depth = parent_depth + 1;
-
-        array_list_add(parent.children_ids, &id);
-    }
-    obj->depth = depth;
-    obj->parent = parent_id;
-    obj->children_ids = array_list_new(sizeof(uint32));
-
-    SparseSet *set = go_pool.sparse_set;
-    sparse_set_add(set, id, obj);
-
-    go_pool_dirty = 1;
-}
-
-void destroy_game_object(uint32 go_id){
-    int32 i = COMPONENT_NONE + 1;
-    for(i; i<COMPONENT_COUNT; i++){
-        destroy_component(i, go_id);
-    }
-    GameObject obj;
-    get_game_object(go_id, &obj);
-
-    uint32 parent_id = obj.parent;
-    GameObject parent;
-    int32 sucess = get_game_object(parent_id, &parent);
-    if(sucess){
-        array_list_remove(parent.children_ids, &parent_id, NULL);
-    }
-    free(obj.name);
-    sparse_set_rem(go_pool.sparse_set, go_id);
-
-    go_pool_dirty = 1;
-}
-
-int32 update_game_object(uint32 id, GameObject *obj){
-    return sparse_set_set(go_pool.sparse_set, id, obj);
-}
-
-int32 get_game_object(uint32 id, GameObject *obj){
-    return sparse_set_get(go_pool.sparse_set, id, obj);
 }
 
 void register_component(ComponentType type, int32 size,
@@ -144,31 +65,47 @@ void register_component(ComponentType type, int32 size,
     pool = pools[type];
 }
 
-int32 add_component(ComponentType type, uint32 go_id, void* component){
-    if(type == COMPONENT_NONE) return 0;
+ComponentHandler add_component(uint32 entity_id, ComponentType type, void* component){
+    if(type == COMPONENT_NONE) return (ComponentHandler){};
 
     ComponentPool pool = pools[type];
 
-    if(pool.type == COMPONENT_NONE) return 0;
+    if(pool.type == COMPONENT_NONE) return (ComponentHandler){};
 
-    return sparse_set_add(pool.sparse_set, go_id, component);
+    sparse_set_add(pool.sparse_set, entity_id, component);
+
+    return (ComponentHandler){entity_id, type};
 }
 
-int32 destroy_component(ComponentType type, uint32 go_id){
-    if(type == COMPONENT_NONE) return 0;
+void get_component(ComponentHandler handler, void* component){
+    ComponentType type = handler.type;
+    if(type == COMPONENT_NONE) return;
 
     ComponentPool pool = pools[type];
 
-    if(pool.type == COMPONENT_NONE) return 0;
+    if(pool.type == COMPONENT_NONE) return;
+
+    SparseSet *set = pool.sparse_set;
+
+    uint32 entity_id = handler.entity_id;
+    sparse_set_get(set, entity_id, component);
+}
+
+void destroy_component(ComponentHandler handler){
+    ComponentType type = handler.type;
+    if(type == COMPONENT_NONE) return;
+
+    ComponentPool pool = pools[type];
+
+    if(pool.type == COMPONENT_NONE) return;
     
     SparseSet *set = pool.sparse_set;
-        
-    Renderer renderer;
-    sparse_set_get(set, go_id, &renderer);
-    pool.on_destroy(&renderer);     
-    
-    sparse_set_rem(set, go_id);
 
-    return 1;
+    uint32 entity_id = handler.entity_id;
+    int8 component[pool.component_size];
+    sparse_set_get(set, entity_id, &component);
+    pool.on_destroy(&component);     
+    
+    sparse_set_rem(set, entity_id);
 }
 

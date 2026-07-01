@@ -17,6 +17,12 @@ typedef struct{
 
 void mat4_print(mat4 mat);
 
+vec3 mat4_angles(mat4 m);
+
+vec3 mat4_back(mat4 m);
+vec3 mat4_right(mat4 m);
+vec3 mat4_up(mat4 m);
+
 mat4 mat4_look_at(vec3 eye, vec3 target, vec3 up);
 mat4 mat4_transpose(mat4 m);
 

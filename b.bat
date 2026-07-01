@@ -12,7 +12,6 @@ cd ..
 xcopy source\configs.config build /E /I /Y
 
 gcc ^
-source/game/*c ^
 source/lib/*.c ^
 source/lib/collections/*.c ^
 source/lib/components/*.c ^

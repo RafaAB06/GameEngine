@@ -30,4 +30,10 @@ uint32 next_id(ID_Generator *gen){
     return id;
 }
 
+void add_unused_id(ID_Generator *gen, uint32 id){
+    ArrayList *list = gen->unused_ids;
+
+    array_list_add(list, &id);
+}
+
 

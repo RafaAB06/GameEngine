@@ -2,15 +2,14 @@
 out vec4 FragColor;
 
 struct Light {
-    vec3 position;
     vec3 direction;
     vec4 color;
     float intensity;
 };
 
 uniform Light u_main_light;
-
 uniform float u_time;
+
 uniform sampler2D main_tex;
 uniform vec4 base_color;
 

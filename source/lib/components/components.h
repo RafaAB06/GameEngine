@@ -8,6 +8,7 @@
 #include "../collections/sparse_set.h"
 #include "../collections/array_list.h"
 #include "../math/vectors.h"
+#include "../math/matrices.h"
 #include "../mesh.h"
 
 typedef void(* OnUpdate)(void *);
@@ -22,18 +23,9 @@ typedef enum{
 }ComponentType;
 
 typedef struct{
-    char *name;
-
-    vec3 position;
-    vec3 rotation;
-    vec3 scale;
-
-    uint32 id;
-    uint32 parent;
-    uint32 depth;
-
-    ArrayList *children_ids;
-}GameObject;
+    uint32 entity_id;
+    ComponentType type;
+}ComponentHandler;
 
 typedef struct{
     ComponentType type;
@@ -47,14 +39,10 @@ typedef struct{
 void init_components();
 void update_components();
 
-void game_object_new(GameObject *obj, const char *name, vec3 position, vec3 rotation, vec3 scale, uint32 parent_id);
-void destroy_game_object(uint32 go_id);
-int32 update_game_object(uint32 id, GameObject *obj);
-int32 get_game_object(uint32 id, GameObject *obj);
-
 void register_component(ComponentType type, int32 size, OnUpdate on_update, OnDestroy on_destroy);
-int32 add_component(ComponentType type, uint32 go_id, void* component);
-int32 destroy_component(ComponentType type, uint32 go_id);
+ComponentHandler add_component(ComponentType type, uint32 entity_id, void* component);
+void get_component(ComponentHandler handler, void* component);
+void destroy_component(ComponentHandler handler);
 
 
 #endif

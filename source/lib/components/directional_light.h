@@ -5,7 +5,6 @@
 #include "../types.h"
 
 typedef struct{
-   vec3 position;
    vec3 rotation;
    vec4 color; 
    float intensity;

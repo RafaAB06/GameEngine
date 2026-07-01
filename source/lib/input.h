@@ -1,6 +1,7 @@
 #ifndef INPUT_H
 #define INPUT_H
 
+#include "../dependencies/glfw3.h"
 #include "math/vectors.h"
 
 #define KEY_SPACE              32
