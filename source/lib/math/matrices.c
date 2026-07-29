@@ -166,8 +166,7 @@ mat4 mat4_rotate(mat4 m, vec3 angles){
         0, 0, 1, 0,
         0, 0, 0, 1
     }};
-    mat4 zy = mat4_mul(z, y);
-    mat4 zyx = mat4_mul(zy, x);
+    mat4 zyx = mat4_mul(mat4_mul(x, y), z);
     return mat4_mul(m, zyx);
 }
 

@@ -10,6 +10,7 @@ typedef struct{
     uint32 material_id;
     uint32 program_id;
     uint32 entity_id;
+    uint32 model_location;
 }Renderer;
 
 void renderer_new(Renderer *self, uint32 entity_id,  Mesh *mesh, Material mat);

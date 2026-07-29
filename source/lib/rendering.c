@@ -106,7 +106,6 @@ void update_rendering(){
         array_list_get(materials, &mat, i);
 
         uint32 current_program = mat.program.gl_id;
-        int32 model = glGetUniformLocation(current_program, "u_model");
         if(current_program != last_program){
             last_program = current_program;
             
@@ -152,7 +151,7 @@ void update_rendering(){
             mat4 world_matrix;
             get_entity_data(entity_id, ENTITY_WORLD, &world_matrix);
             
-            glUniformMatrix4fv(model, 1, GL_FALSE, world_matrix.m);
+            glUniformMatrix4fv(renderer.model_location, 1, GL_FALSE, world_matrix.m);
 
             glBindVertexArray(renderer.mesh->VAO);
             glDrawElements(GL_TRIANGLES, mesh.index_count, GL_UNSIGNED_INT, 0);
@@ -202,6 +201,8 @@ void register_material(Material material){
 }
 
 void add_renderer(Renderer *renderer){
+    renderer->model_location = glGetUniformLocation(renderer->program_id, "u_model");
+
     array_list_add(renderers, renderer);
     renderers_is_dirty = 1;
 }
